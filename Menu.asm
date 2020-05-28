@@ -60,7 +60,45 @@ org 100h        ; Origen,  indica que comience el programa
             add dl,30h
             int 21h                ;llamamos interrupcion 21h
         endm 
-
+        ;Macro 3
+        LeerNumeros Macro
+            Imprimir Mensaje9       ;Imprime el contenido del mensaje 7
+            Call Leer                
+            SUB AL, 30H             ; RESTAR 30H/48D 
+            mov dece, al
+            Call Leer               
+            SUB AL, 30H             ; RESTAR 30H/48D 
+            mov uni, al
+            mov al,dece
+            mov bl,10
+            mul bl
+            add al,uni
+            mov N1,al
+            Imprimir Mensaje10       ;Imprime el contenido del mensaje 7
+            Call Leer               
+            SUB AL, 30H             ; RESTAR 30H/48D 
+            mov dece, al
+            Call Leer             
+            SUB AL, 30H             ; RESTAR 30H/48D 
+            mov uni, al
+            mov al,dece
+            mov bl,10
+            mul bl
+            add al,uni
+            mov N2,al  
+        endm 
+        SALTO PROC NEAR
+            MOV AH,09H
+            LEA DX,LINEA
+            INT 21H                  ;llamamos interrupcion 21h
+            MOV DL,00H
+            RET
+            SALTO ENDP 
+        leernum macro
+           mov ah,01h     ;Function(character read) Guarda en AL
+           int 21h        ;Interruption DOS functions
+           sub al,30h     ;ajustamos valores
+        endm  
 
 ;---------------------------------------------------------------------------------------------       
 .code
@@ -117,4 +155,125 @@ main:
             mov dece,al ;respaldo las decenas en dec, en este caso 3
             Resultado
             Call salto
-            jmp Menuprincipal   
+            jmp Menuprincipal  
+            Multiplicacion: 
+           Imprimir Mensaje9
+           leernum
+           mov mil,al    ;[mil].cen * dece = ac.N1.N2
+           leernum
+           mov cen,al    ;mil.[cen] * dece = ac.N1.N2 
+           Imprimir Mensaje10
+           leernum   
+           mov dece,al    ;mil.cen * [dece] = ac.N1.N2
+           leernum
+           mov uni,al    ;mil.cen * [dece] = ac.N1.N2
+           ;Realizamos operacion   
+          
+           mov al,uni  ;unidad del segundo numero
+           mov bl,cen  ;unidad del primer numero
+           mul bl       ;multiplicar
+           mov ah,0     ;limpiamos ah0
+           aam          ;separamos de hex a dec
+           mov ac1,ah   ;decenas del primera multiplicacion
+           mov N4,al    ;unidades del primera multiplicacion
+                    
+           mov al,uni  ;unidades del segundo numero
+           mov bl,mil  ;decentas del primer numero
+           mul bl       ;multiplicar
+           mov N3,al    ;movemos el resultado de la operacion a N3
+           mov bl,ac1   ;movemos el acarreo a bl
+           add N3,bl    ;sumamos resultado mas acarreo
+           mov ah,00h   ;limpiamos ah por residuos
+           mov al,N3    ;movemos el resultado de la suma a al
+           aam          ;separamos  de hex a dec
+           mov N3,al    ;guardamos unidades en N3
+           mov ac1,ah   ;guardamos decenas en ac1
+        
+           mov al,dece    ;al = dece
+           mov bl,cen    ;bl = cen
+           mul bl         ;AL = dece*cen (BL*AL)
+           mov Ah,0h      ;
+           AAM            ;ASCII Adjusment
+           mov ac,AH      ;ac = AH (Acarreo)
+           mov N2,AL      ;N2 = AL       (Unidad del resultado)
+        
+           mov al,dece    ;AL = dece
+           mov bl,mil    ;BL = mil
+           mul bl         ;AL = mil*dece (BL*AL)
+           mov N1,al      ;N1 = AL       (Decena del resultado)
+           mov bl,ac      ;BL = Acarreo anterior
+           add N1,bl      ;N1 = N1+ac (N1 + Acarreo)
+           mov ah,00h     ;
+           mov al,N1      ;AL = N1 (Asignacion para el ajust)
+           AAM            ;ASCII Adjustment
+           mov N1,al      ;N1 = AL
+           mov ac,ah      ;ac = AH (Acarreo para la Centena del resultado)   
+           ;suma final
+           ;R4 resulta ser las unidades de mul y no se toma en cuenta ya que se pasa entero
+           mov ax,0000h   ;limpiamos ax
+           mov al,N3      ;movemos el segundo resultado de la primera mult a al
+           mov bl,N2      ;movemos primer resultado de la segunda mult a bl
+           add al,bl      ;sumamos
+           mov ah,00h     ;limpiamos ah
+           aam            ;separamos hex a dec
+           mov N3,al      ;N3 guarda las decenas del resultado final
+           mov N2,ah      ;N2 se utiliza como nuevo acarreo
+           mov ax,0000h   ;''''
+           mov al,ac1     ;movemos el acarreo de la primera mult a al
+           mov bl,N1      ;movemos segundo resultado de la segunda mult a bl
+           add al,N2      ;sumamos el nuevo  acarreo de la suma anterior  a al
+           add al,bl      ;sumamos al a bl
+           mov ah,00h     ;limpiamos el registro ah
+           aam            ;separamos de hex a dec
+           mov N1,al      ;N1 guarda las centenas
+           mov N2,ah      ;ah se sigue utilizando como acarreo
+           mov al,N2      ;movemos el acarreo a al
+           mov bl,ac      ;movemos ac a bl
+           add al,bl      ;sumamos al a bl
+           mov ac,al      ;mov al a ac como nuestro acarreo final
+           Imprimir Mensaje8
+           ;Mostramos resultado
+           mov ah,02h 
+           mov dl,ac
+           add dl,30h
+           int 21h        ;Mostramos ac (millar)
+           mov ah,02H
+           mov dl,N1
+           add dl,30h
+           int 21h        ;Mostramos N1 (centena)
+           mov ah,02H
+           mov dl,N3
+           add dl,30h
+           int 21h        ;Mostramos N3 (decena)
+           mov ah,02H
+           mov dl,N4
+           add dl,30h
+           int 21h        ;Mostramos unidades
+           Call salto
+           jmp Menuprincipal   ; regresa al menu principal
+        
+        Division:
+            Imprimir msg        ; llama al msg y lo muestra en pantalla
+            LeerNumeros         ; llama al mensaje LeerNumeros y lo muestra en pantalla
+            
+            xor ax, ax    ;Limpia el registro ax, esto es para que no ocurra errores en la division
+            mov al, N1
+            mov bl, N2 
+            div bl
+            mov N3, al  
+            mov al,N3 ; asigno un valor de 3 digitos en decimal al registro AL
+            aam ;ajusta el valor en AL por: AH=23 Y AL=4
+            mov uni,al ; Respaldo 4 en unidades
+            mov al,ah  ;muevo lo que tengo en AH a AL para poder volver a separar los numeros
+            aam         ; separa lo qe hay en AL por: AH=2 Y AL=3
+            mov cen,ah ;respaldo las centenas en cen en este caso 2
+            mov dece,al ;respaldo las decenas en dec, en este caso 3
+            Resultado
+            Call salto
+            jmp Menuprincipal     ; regresa al menu principal                                                                                                           
+        salir:                 ;Cuando se presione la tecla enter se pasa a este metodo
+            MOV AH, 4cH        ;Servicio de salida o finalizacion del programa
+            INT 21H          
+
+        end                    ;Fin del programa       
+ret        
